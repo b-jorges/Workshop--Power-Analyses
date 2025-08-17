@@ -169,11 +169,11 @@ Test_PSEs = Test_PSEs1$par %>% filter(parn == "p1")
 Test_PSEs$SD_Fitted = (Test_PSEs1$par %>% filter(parn == "p2"))$par
 
 save(Test_PSEs, file = paste0(dirname(rstudioapi::getSourceEditorContext()$path), "/SavedVariables/", "Test_PSEs.RData"))
-load(file = paste0(dirname(rstudioapi::getSourceEditorContext()$path),, "/SavedVariables/", "Test_PSEs.RData"))
+load(file = paste0(dirname(rstudioapi::getSourceEditorContext()$path), "/SavedVariables/", "Test_PSEs.RData"))
 
 
 #Sample analysis
-Analysis_SimData_PSE = lmer(Mean/StandardValues ~ ConditionOfInterest1*ConditionOfInterest2 + StandardValues + (StandardValues | ID),
+Analysis_SimData_PSE = lmer(par/StandardValues ~ ConditionOfInterest1*ConditionOfInterest2 + StandardValues + (StandardValues | ID),
             data = Test_PSEs %>% filter(SD_Fitted > 0 & SD_Fitted < 3*StandardValues & par > 0 & par < 3 * StandardValues))
 
 Intercept_Obs = summary(LMM)$coef["(Intercept)","Estimate"]
@@ -188,7 +188,7 @@ Coef_EnvironmentXPursuit_Sim = summary(Analysis_SimData_PSE)$coef["ConditionOfIn
 ###Compare Observed SDs to simulated SDs
 Analysis_SimData_JND = lmer(SD_Fitted/StandardValues ~ ConditionOfInterest1 * ConditionOfInterest2 +
                 (StandardValues| ID),
-              data = JointDF %>% filter(SD_Fitted > 0 & SD_Fitted < 3*StandardValues & par > 0 & par < 3 * StandardValues))
+              data = Test_PSEs %>% filter(SD_Fitted > 0 & SD_Fitted < 3*StandardValues & par > 0 & par < 3 * StandardValues))
 
 Intercept_SD_Obs = summary(LMM_SD)$coef["(Intercept)","Estimate"]
 Intercept_Sim_SD = summary(Analysis_SimData_JND)$coef["(Intercept)","Estimate"]
