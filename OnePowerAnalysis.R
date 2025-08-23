@@ -3,6 +3,9 @@ require(ggplot2)
 require(purrr)
 require(lme4)
 require(lmerTest)
+require(cowplot)
+require(ggdist)
+theme_set(theme_cowplot())
 setwd(paste0(dirname(rstudioapi::getSourceEditorContext()$path)))
 source(paste0(dirname(rstudioapi::getSourceEditorContext()$path),"/GetValuesFromPilotData.R"))
 
@@ -311,23 +314,41 @@ for (nParticipants in c(25,50,75)){
 }
 
 load(file=paste0(dirname(rstudioapi::getSourceEditorContext()$path),"/SavedVariables/PowerfulDataframe.RData"))
-DurationSimulations = Sys.time() - TimeStartSimulations
 colnames(PowerfulDataframe) = c("nParticipants","rep","PSE_Interaction", "WhichValue","pvalue","estimate","iteration")
-alpha = 0.05
 
-PowerfulDataframe = PowerfulDataframe %>% group_by(nParticipants,rep, WhichValue,PSE_Interaction) %>% 
-  mutate(Power = mean(pvalue < alpha))
-
-PowerfulDataframe %>% group_by(nParticipants,WhichValue,PSE_Interaction,rep) %>% 
-  slice(1)
-
+#Do some renaming. Easier than changing it in the plots.
 PowerfulDataframe = PowerfulDataframe %>% 
   mutate(n_trials = paste0(rep, " Trials"),
          AnalysisMethod = case_when(
            WhichValue == "PSE_LMM" ~ "LMM",
+           WhichValue == "PSE_LMM" ~ "LMM",
            TRUE ~ "GLMM"))
 
+#plot the distribution of p values for one "condition"
 ggplot(PowerfulDataframe %>% 
+         filter(WhichValue %in% c("PSE_LMM", "PSE_GLMM")) %>% 
+         filter(AnalysisMethod == "GLMM" & n_trials == "30 Trials"), 
+       aes(as.factor(nParticipants), pvalue)) +
+  facet_wrap(AnalysisMethod~n_trials) +
+  stat_dots(side = "right", justification = -0.2, size = 5, alpha = 0.33) +
+  ylab("p value") +
+  xlab("# Participants") +
+  geom_hline(yintercept = 0.05, linetype = 4, linewidth = 2)
+ggsave("Figures/Distribution of pvalues.jpg",w = 5, h = 5)
+
+
+#set alpha
+alpha = 0.05
+
+#get the power for each combination of participants and repetitions
+PowerfulDataframe = PowerfulDataframe %>% group_by(nParticipants,rep, WhichValue,PSE_Interaction) %>% 
+  mutate(Power = mean(pvalue < alpha))
+PowerfulDataframe %>% group_by(nParticipants,WhichValue,PSE_Interaction,rep) %>% 
+  slice(1)
+
+#plot the power for the different combinations of participant/repetitions
+ggplot(PowerfulDataframe %>% 
+         filter(WhichValue %in% c("PSE_LMM", "PSE_GLMM")) %>% 
          filter(PSE_Interaction %in% sort(unique(PowerfulDataframe$PSE_Interaction))[1:3]), 
        aes(nParticipants,Power, color = as.factor(PSE_Interaction))) +
   geom_line(linewidth = 1) +

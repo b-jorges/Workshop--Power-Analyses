@@ -4,7 +4,9 @@ require(purrr)
 require(lme4)
 require(lmerTest)
 require(stats)
-require(brms)
+require(cowplot)
+require(ggdist)
+theme_set(theme_cowplot())
 setwd(paste0(dirname(rstudioapi::getSourceEditorContext()$path)))
 
 #Set up a function that creates a dataset given certain values
@@ -164,4 +166,4 @@ ggplot(PowerfulDataframe_RT,
   facet_wrap(.~n_trials) +
   scale_color_manual(values = c("orange","purple","red"),
                      name = "Strength of Effect")
-ggsave("Figures/FigureOnePowerAnalysis.jpg",w = 7, h = 7)
+ggsave("Figures/FigureOnePowerAnalysis.jpg",w = 9, h = 5)
