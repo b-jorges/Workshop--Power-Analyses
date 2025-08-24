@@ -1,13 +1,17 @@
-require(dplyr)
-require(ggplot2)
-require(purrr)
-require(lme4)
-require(lmerTest)
-require(cowplot)
-require(ggdist)
+# install.packges("dplyr", "ggplot2", "purrr", "lme4", "lmerTest","cowplot","ggdist", "quickpsy")
+
+require(dplyr) #general data manipulation
+require(ggplot2) #plotting
+require(cowplot) #theme for plotting
 theme_set(theme_cowplot())
-setwd(paste0(dirname(rstudioapi::getSourceEditorContext()$path)))
-source(paste0(dirname(rstudioapi::getSourceEditorContext()$path),"/GetValuesFromPilotData.R"))
+require(ggdist) #plotting
+require(purrr) #for rbernoulli() function (to pick 0/1s based on probabilities)
+require(lme4) #for statistics (mixed modelling)
+require(lmerTest) #approximate p values for lme4
+require(quickpsy) #fit psychometric functions and extract PSEs/JNDs
+setwd(paste0(dirname(rstudioapi::getSourceEditorContext()$path))) #set working directory
+source(paste0(dirname(rstudioapi::getSourceEditorContext()$path),"/GetValuesFromPilotData_2AFC.R")) #run this script (get values from pilot data)
+
 
 ############Make a function to simulate the data
 #This function simulates one full data depending on a whole bunch of parameters. (Perception is complicated!)
@@ -118,60 +122,61 @@ Psychometric
 }
 
 
-###############################################################
-###########################simulate one data set###############
-###############################################################
-#set the parameters
-nParticipants = 200
-ConditionOfInterest1 = c("1Environment", "2No_Environment")
-ConditionOfInterest2 = c("1Fixation", "2Pursuit")
-StandardValues = c(2, 4, 6)
-reps = 30
-PSE_Difference_CoI1 = PSE_Environment
-PSE_Difference_CoI2 = PSE_Pursuit
-#for Interaction we got a value of:
-PSE_Interaction
-#but let's simulate power for a range of values:
-Range_PSE_Interaction = PSE_Interaction*c(1,0.5, 0.15) #Performance for CoI2 is 20% lower in presence of CoI1 = NoEnvironment than in presence of CoI1 = Environment
-JND_Difference_CoI1 = SD_Environment
-JND_Difference_CoI2 = SD_Pursuit
-JND_Interaction = SD_Interaction
-Multiplicator_PSE_Standard = Mean_Standard
-#estimated SDs can be inflated heavily when trial counts are low, so let's divide it by two to get a more appropriate value:
-Multiplicator_SD_Standard = Multiplicator_SD_Standard
-Type_ResponseFunction = Type_ResponseFunction
-SD_ResponseFunction = SD_ResponseFunction
-Mean_Variability_Between = Mean_Variability_Between
-SD_Variability_Between = SD_Variability_Between
-
-#Build one (large) dataset to check whether the everything was simulated properly
-set.seed(657)
-Test = SimulatePsychometricData(nParticipants = 1000,
-                         ConditionOfInterest1,
-                         ConditionOfInterest2,
-                         StandardValues,
-                         reps,
-                         PSE_Difference_CoI1,
-                         PSE_Difference_CoI2,
-                         PSE_Interaction,
-                         JND_Difference_CoI1,
-                         JND_Difference_CoI2,
-                         JND_Interaction,
-                         Multiplicator_PSE_Standard,
-                         Multiplicator_SD_Standard,
-                         Type_ResponseFunction,
-                         SD_ResponseFunction,
-                         Mean_Variability_Between,
-                         SD_Variability_Between)
-
-#Fit Psychometric Functions to the simulated data
-Test_PSEs1 = quickpsy::quickpsy(Test,Presented_TestStimulusStrength,Answer,
-                                               grouping = .(ID,StandardValues,ConditionOfInterest1,ConditionOfInterest2),
-                                               bootstrap = "none")
-Test_PSEs = Test_PSEs1$par %>% filter(parn == "p1")
-Test_PSEs$SD_Fitted = (Test_PSEs1$par %>% filter(parn == "p2"))$par
-
-save(Test_PSEs, file = paste0(dirname(rstudioapi::getSourceEditorContext()$path), "/SavedVariables/", "Test_PSEs.RData"))
+##################################################################
+###########################simulate one data set##################
+##################################################################
+# #(to check if the fitted PSEs/JNDs are appropriate to our expections)
+# #set the parameters
+# nParticipants = 200
+# ConditionOfInterest1 = c("1Environment", "2No_Environment")
+# ConditionOfInterest2 = c("1Fixation", "2Pursuit")
+# StandardValues = c(2, 4, 6)
+# reps = 30
+# PSE_Difference_CoI1 = PSE_Environment
+# PSE_Difference_CoI2 = PSE_Pursuit
+# #for Interaction we got a value of:
+# PSE_Interaction
+# #but let's simulate power for a range of values:
+# Range_PSE_Interaction = PSE_Interaction*c(1,0.5, 0.15) #Performance for CoI2 is 20% lower in presence of CoI1 = NoEnvironment than in presence of CoI1 = Environment
+# JND_Difference_CoI1 = SD_Environment
+# JND_Difference_CoI2 = SD_Pursuit
+# JND_Interaction = SD_Interaction
+# Multiplicator_PSE_Standard = Mean_Standard
+# #estimated SDs can be inflated heavily when trial counts are low, so let's divide it by two to get a more appropriate value:
+# Multiplicator_SD_Standard = Multiplicator_SD_Standard
+# Type_ResponseFunction = Type_ResponseFunction
+# SD_ResponseFunction = SD_ResponseFunction
+# Mean_Variability_Between = Mean_Variability_Between
+# SD_Variability_Between = SD_Variability_Between
+# 
+# #Build one (unreasonably large) dataset to check whether the everything was simulated properly
+# set.seed(657)
+# Test = SimulatePsychometricData(nParticipants = 1000,
+#                          ConditionOfInterest1,
+#                          ConditionOfInterest2,
+#                          StandardValues,
+#                          reps,
+#                          PSE_Difference_CoI1,
+#                          PSE_Difference_CoI2,
+#                          PSE_Interaction,
+#                          JND_Difference_CoI1,
+#                          JND_Difference_CoI2,
+#                          JND_Interaction,
+#                          Multiplicator_PSE_Standard,
+#                          Multiplicator_SD_Standard,
+#                          Type_ResponseFunction,
+#                          SD_ResponseFunction,
+#                          Mean_Variability_Between,
+#                          SD_Variability_Between)
+# 
+# #Fit Psychometric Functions to the simulated data
+# Test_PSEs1 = quickpsy::quickpsy(Test,Presented_TestStimulusStrength,Answer,
+#                                                grouping = .(ID,StandardValues,ConditionOfInterest1,ConditionOfInterest2),
+#                                                bootstrap = "none")
+# Test_PSEs = Test_PSEs1$par %>% filter(parn == "p1")
+# Test_PSEs$SD_Fitted = (Test_PSEs1$par %>% filter(parn == "p2"))$par
+# 
+# save(Test_PSEs, file = paste0(dirname(rstudioapi::getSourceEditorContext()$path), "/SavedVariables/", "Test_PSEs.RData"))
 load(file = paste0(dirname(rstudioapi::getSourceEditorContext()$path), "/SavedVariables/", "Test_PSEs.RData"))
 
 
@@ -227,91 +232,91 @@ SD_ResponseFunction = SD_ResponseFunction
 Mean_Variability_Between = Mean_Variability_Between
 SD_Variability_Between = SD_Variability_Between
 
-nIterations = 100
-TimeStartSimulations = Sys.time()
-PowerfulDataframe = data.frame()
-
-for (nParticipants in c(25,50,75)){
-  for (reps in c(30, 50, 70)){
-    for (PSE_Interaction in Range_PSE_Interaction){
-      
-      TimeStartTrial = Sys.time() #get time at beginning of trial
-      
-      for(i in 1:nIterations){
-        
-        print(paste0("Number of Participants: ", nParticipants))
-        print(paste0("Iteration: ", i))
-        print(paste0("PSE_Interaction: ", round(PSE_Interaction,4)))
-        
-        
-        #use our function to 
-        Test = SimulatePsychometricData(nParticipants,
-                                 ConditionOfInterest1,
-                                 ConditionOfInterest2,
-                                 StandardValues,
-                                 reps,
-                                 PSE_Difference_CoI1,
-                                 PSE_Difference_CoI2,
-                                 PSE_Interaction,
-                                 JND_Difference_CoI1,
-                                 JND_Difference_CoI2,
-                                 JND_Interaction,
-                                 Multiplicator_PSE_Standard,
-                                 Multiplicator_SD_Standard,
-                                 Type_ResponseFunction,
-                                 SD_ResponseFunction,
-                                 Mean_Variability_Between,
-                                 SD_Variability_Between)
-        
-        #Analysis Option 1: 1-step-approach using generalized linear mixed modelling
-        GLMM = glmer(Answer ~ ConditionOfInterest1*ConditionOfInterest2 + Presented_TestStimulusStrength + (Presented_TestStimulusStrength| ID) + (Presented_TestStimulusStrength| StandardValues), 
-                     family = binomial(link = "logit"), 
-                     data = Test %>% filter(Presented_TestStimulusStrength < StandardValues*3 & Presented_TestStimulusStrength > 0),
-                     nAGQ = 1,
-                     glmerControl(optimizer = "nloptwrap"))
-        
-        #Analysis Option 2: 2-step-approach by first fitting PSEs/JNDs and then using linear mixed modelling for stats
-        Test_PSEs1 = quickpsy::quickpsy(Test %>% filter(Presented_TestStimulusStrength < StandardValues*3 & Presented_TestStimulusStrength > 0),Presented_TestStimulusStrength, Answer,
-                                                 grouping = .(ID,StandardValues,ConditionOfInterest1,ConditionOfInterest2),
-                                                 bootstrap = "none")
-        Test_PSEs = Test_PSEs1$par %>% filter(parn == "p1")
-        Test_PSEs$SD_Fitted = (Test_PSEs1$par %>% filter(parn == "p2"))$par
-        
-        #Analysis Option 2a: interaction
-        LMM = lmer(par ~ ConditionOfInterest1*ConditionOfInterest2 + (StandardValues | ID),
-                   data = Test_PSEs %>% filter(SD_Fitted > 0 & SD_Fitted < 3*StandardValues & par > 0 & par < 3 * StandardValues))
-        
-        #Analysis Option 2b: we should see an effect when there is no environment and no effect
-        #when there is an environment
-        LMM_Split1 = lmer(par ~ ConditionOfInterest2 + (StandardValues | ID),
-                   data = Test_PSEs %>% filter(SD_Fitted > 0 & SD_Fitted < 3*StandardValues & par > 0 & par < 3 * StandardValues) %>% 
-                     filter(ConditionOfInterest1 == "1Environment"))
-        
-        LMM_Split2 = lmer(par ~ ConditionOfInterest2 + (StandardValues | ID),
-                          data = Test_PSEs %>% filter(SD_Fitted > 0 & SD_Fitted < 3*StandardValues & par > 0 & par < 3 * StandardValues) %>% 
-                            filter(ConditionOfInterest1 == "2No_Environment"))
-        
-        #save everything into
-        PowerfulDataframe = rbind(PowerfulDataframe,data.frame(nParticipants = rep(nParticipants,4),
-                                                      rep = rep(reps,4),
-                                                      PSE_Interaction = rep(PSE_Interaction,4),
-                                                      WhichValue = c("PSE_GLMM","PSE_LMM","PSE_LMM_Split_Environment","PSE_LMM_Split_NoEnvironment"),
-                                                      pvalue = c(summary(GLMM)$coefficients["ConditionOfInterest12No_Environment:ConditionOfInterest22Pursuit","Pr(>|z|)"],
-                                                                 summary(LMM)$coefficients["ConditionOfInterest12No_Environment:ConditionOfInterest22Pursuit","Pr(>|t|)"],
-                                                                 summary(LMM_Split1)$coefficients["ConditionOfInterest22Pursuit","Pr(>|t|)"],
-                                                                 summary(LMM_Split2)$coefficients["ConditionOfInterest22Pursuit","Pr(>|t|)"]),
-                                                      estimate = c(summary(GLMM)$coefficients["ConditionOfInterest12No_Environment:ConditionOfInterest22Pursuit","Estimate"],
-                                                                   summary(LMM)$coefficients["ConditionOfInterest12No_Environment:ConditionOfInterest22Pursuit","Estimate"],
-                                                                   summary(LMM_Split1)$coefficients["ConditionOfInterest22Pursuit","Estimate"],
-                                                                   summary(LMM_Split2)$coefficients["ConditionOfInterest22Pursuit","Estimate"]),
-                                                      iteration = rep(i,4)))
-      }
-      print(paste0(nIterations, " iterations took ", round(Sys.time() - TimeStartTrial), " seconds.")) 
-      print(paste0("The power for the current run through (",nParticipants," Participants, ", reps, " Repetitions) is ",mean(PowerfulDataframe$pvalue[PowerfulDataframe$nParticipants == nParticipants] < 0.05)))
-      save(PowerfulDataframe, file = paste0(dirname(rstudioapi::getSourceEditorContext()$path), "/SavedVariables/PowerfulDataframe.RData"))
-    }
-  }
-}
+# nIterations = 100
+# TimeStartSimulations = Sys.time()
+# PowerfulDataframe = data.frame()
+# 
+# for (nParticipants in c(25,50,75)){
+#   for (reps in c(30, 50, 70)){
+#     for (PSE_Interaction in Range_PSE_Interaction){
+#       
+#       TimeStartTrial = Sys.time() #get time at beginning of trial
+#       
+#       for(i in 1:nIterations){
+#         
+#         print(paste0("Number of Participants: ", nParticipants))
+#         print(paste0("Iteration: ", i))
+#         print(paste0("PSE_Interaction: ", round(PSE_Interaction,4)))
+#         
+#         
+#         #use our function to 
+#         Test = SimulatePsychometricData(nParticipants,
+#                                  ConditionOfInterest1,
+#                                  ConditionOfInterest2,
+#                                  StandardValues,
+#                                  reps,
+#                                  PSE_Difference_CoI1,
+#                                  PSE_Difference_CoI2,
+#                                  PSE_Interaction,
+#                                  JND_Difference_CoI1,
+#                                  JND_Difference_CoI2,
+#                                  JND_Interaction,
+#                                  Multiplicator_PSE_Standard,
+#                                  Multiplicator_SD_Standard,
+#                                  Type_ResponseFunction,
+#                                  SD_ResponseFunction,
+#                                  Mean_Variability_Between,
+#                                  SD_Variability_Between)
+#         
+#         #Analysis Option 1: 1-step-approach using generalized linear mixed modelling
+#         GLMM = glmer(Answer ~ ConditionOfInterest1*ConditionOfInterest2 + Presented_TestStimulusStrength + (Presented_TestStimulusStrength| ID) + (Presented_TestStimulusStrength| StandardValues), 
+#                      family = binomial(link = "logit"), 
+#                      data = Test %>% filter(Presented_TestStimulusStrength < StandardValues*3 & Presented_TestStimulusStrength > 0),
+#                      nAGQ = 1,
+#                      glmerControl(optimizer = "nloptwrap"))
+#         
+#         #Analysis Option 2: 2-step-approach by first fitting PSEs/JNDs and then using linear mixed modelling for stats
+#         Test_PSEs1 = quickpsy::quickpsy(Test %>% filter(Presented_TestStimulusStrength < StandardValues*3 & Presented_TestStimulusStrength > 0),Presented_TestStimulusStrength, Answer,
+#                                                  grouping = .(ID,StandardValues,ConditionOfInterest1,ConditionOfInterest2),
+#                                                  bootstrap = "none")
+#         Test_PSEs = Test_PSEs1$par %>% filter(parn == "p1")
+#         Test_PSEs$SD_Fitted = (Test_PSEs1$par %>% filter(parn == "p2"))$par
+#         
+#         #Analysis Option 2a: interaction
+#         LMM = lmer(par ~ ConditionOfInterest1*ConditionOfInterest2 + (StandardValues | ID),
+#                    data = Test_PSEs %>% filter(SD_Fitted > 0 & SD_Fitted < 3*StandardValues & par > 0 & par < 3 * StandardValues))
+#         
+#         #Analysis Option 2b: we should see an effect when there is no environment and no effect
+#         #when there is an environment
+#         LMM_Split1 = lmer(par ~ ConditionOfInterest2 + (StandardValues | ID),
+#                    data = Test_PSEs %>% filter(SD_Fitted > 0 & SD_Fitted < 3*StandardValues & par > 0 & par < 3 * StandardValues) %>% 
+#                      filter(ConditionOfInterest1 == "1Environment"))
+#         
+#         LMM_Split2 = lmer(par ~ ConditionOfInterest2 + (StandardValues | ID),
+#                           data = Test_PSEs %>% filter(SD_Fitted > 0 & SD_Fitted < 3*StandardValues & par > 0 & par < 3 * StandardValues) %>% 
+#                             filter(ConditionOfInterest1 == "2No_Environment"))
+#         
+#         #save everything into
+#         PowerfulDataframe = rbind(PowerfulDataframe,data.frame(nParticipants = rep(nParticipants,4),
+#                                                       rep = rep(reps,4),
+#                                                       PSE_Interaction = rep(PSE_Interaction,4),
+#                                                       WhichValue = c("PSE_GLMM","PSE_LMM","PSE_LMM_Split_Environment","PSE_LMM_Split_NoEnvironment"),
+#                                                       pvalue = c(summary(GLMM)$coefficients["ConditionOfInterest12No_Environment:ConditionOfInterest22Pursuit","Pr(>|z|)"],
+#                                                                  summary(LMM)$coefficients["ConditionOfInterest12No_Environment:ConditionOfInterest22Pursuit","Pr(>|t|)"],
+#                                                                  summary(LMM_Split1)$coefficients["ConditionOfInterest22Pursuit","Pr(>|t|)"],
+#                                                                  summary(LMM_Split2)$coefficients["ConditionOfInterest22Pursuit","Pr(>|t|)"]),
+#                                                       estimate = c(summary(GLMM)$coefficients["ConditionOfInterest12No_Environment:ConditionOfInterest22Pursuit","Estimate"],
+#                                                                    summary(LMM)$coefficients["ConditionOfInterest12No_Environment:ConditionOfInterest22Pursuit","Estimate"],
+#                                                                    summary(LMM_Split1)$coefficients["ConditionOfInterest22Pursuit","Estimate"],
+#                                                                    summary(LMM_Split2)$coefficients["ConditionOfInterest22Pursuit","Estimate"]),
+#                                                       iteration = rep(i,4)))
+#       }
+#       print(paste0(nIterations, " iterations took ", round(Sys.time() - TimeStartTrial), " seconds.")) 
+#       print(paste0("The power for the current run through (",nParticipants," Participants, ", reps, " Repetitions) is ",mean(PowerfulDataframe$pvalue[PowerfulDataframe$nParticipants == nParticipants] < 0.05)))
+#       save(PowerfulDataframe, file = paste0(dirname(rstudioapi::getSourceEditorContext()$path), "/SavedVariables/PowerfulDataframe.RData"))
+#     }
+#   }
+# }
 
 load(file=paste0(dirname(rstudioapi::getSourceEditorContext()$path),"/SavedVariables/PowerfulDataframe.RData"))
 colnames(PowerfulDataframe) = c("nParticipants","rep","PSE_Interaction", "WhichValue","pvalue","estimate","iteration")
@@ -336,15 +341,12 @@ ggplot(PowerfulDataframe %>%
   geom_hline(yintercept = 0.05, linetype = 4, linewidth = 2)
 ggsave("Figures/Distribution of pvalues.jpg",w = 5, h = 5)
 
-
 #set alpha
 alpha = 0.05
 
 #get the power for each combination of participants and repetitions
 PowerfulDataframe = PowerfulDataframe %>% group_by(nParticipants,rep, WhichValue,PSE_Interaction) %>% 
   mutate(Power = mean(pvalue < alpha))
-PowerfulDataframe %>% group_by(nParticipants,WhichValue,PSE_Interaction,rep) %>% 
-  slice(1)
 
 #plot the power for the different combinations of participant/repetitions
 ggplot(PowerfulDataframe %>% 

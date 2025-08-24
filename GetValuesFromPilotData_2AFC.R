@@ -1,17 +1,25 @@
-library(ggplot2)
-library(quickpsy)
-library(dplyr)
-library(lme4)
-library(lmerTest)
-require(cowplot)
+# install.packges("dplyr", "ggplot2", "lme4", "lmerTest","cowplot")
+
+require(dplyr) #general data manipulation
+require(ggplot2) #plotting
+require(cowplot) #theme for plotting
 theme_set(theme_cowplot())
+require(lme4) #for statistics (mixed modelling)
+require(lmerTest) #approximate p values for lme4
+require(quickpsy) #fit psychometric functions and extract PSEs/JNDs
+setwd(paste0(dirname(rstudioapi::getSourceEditorContext()$path))) #set working directory
+
 
 
 #Here we load the Aubert-Fleischl data set, do the outlier analysis as outlined in the pre-registration
 #then we extract PSEs and JNDs for each condition and participant, which we will then use as base for our power analysis 
 Data = read.csv(paste0(dirname(rstudioapi::getSourceEditorContext()$path),
-                       "/Pilot_Data.csv"))
+                       "/Pilot_Data_2AFC.csv"))
 
+#Do some preprocessing. Not too relevant for the purpose of this workshop, will vary with
+#your data. Here, we look at for example how well participants were fixating/pursuing the target
+#how good their overall performance was (qua outlier analysis) and other stuff. Jump to 
+#line 87, that's where it gets relevant again.
 Data = Data %>% 
   mutate(Good = case_when(
               Environment == "No_Environment" ~ 1,
@@ -68,7 +76,6 @@ WhichParticipantsGood = ParticipantGood %>%
   slice(1)
 GoodIDs = WhichParticipantsGood$ID[WhichParticipantsGood$ParticipantGood == 1]
 
-
 CheckQuality = Data %>%
   filter(Environment != "No_Environment") %>% 
   group_by(ID,Fixation, Environment, velH) %>% 
@@ -76,6 +83,7 @@ CheckQuality = Data %>%
   slice(1) %>% 
   dplyr::select(ID,Fixation,Environment,velH,HowManyGood,nGoodPursuitPerCondition,nGoodFixationPerCondition)
 
+#Let's fit psychometric functions separately for each condition/participant
 Fits = (quickpsy::quickpsy(Data %>%
                              filter(!(nGoodPursuitPerCondition < 10 & Fixation == "Pursuit" & 
                                       Environment == "Environment_Local_Info") &
@@ -83,10 +91,10 @@ Fits = (quickpsy::quickpsy(Data %>%
                                       Environment == "Environment_Local_Info")) %>% 
                              filter(Good == 1) %>% #only good trials
                              filter(ID %in% GoodIDs), #only good participants
-                               x = velH_Pest, 
-                               k = Pest_Faster, 
-                               grouping = .(Environment,Fixation,velH,ID), 
-                               bootstrap = "none"))$parini
+                               x = velH_Pest, #stimulus strength
+                               k = Pest_Faster, #participant response
+                               grouping = .(Environment,Fixation,velH,ID), #conditions 
+                               bootstrap = "none"))$parini #"parini" are the JNDs/PSEs
 
 Fits = cbind(Fits %>% 
   filter(paran == "p1"),(Fits %>% 

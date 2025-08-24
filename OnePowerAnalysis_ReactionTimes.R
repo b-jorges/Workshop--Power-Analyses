@@ -1,13 +1,13 @@
-require(dplyr)
-require(ggplot2)
-require(purrr)
-require(lme4)
-require(lmerTest)
-require(stats)
-require(cowplot)
-require(ggdist)
+# install.packges("dplyr", "ggplot2", "lme4", "lmerTest","cowplot")
+
+require(dplyr) #general data manipulation
+require(ggplot2) #plotting
+require(cowplot) #theme for plotting
 theme_set(theme_cowplot())
-setwd(paste0(dirname(rstudioapi::getSourceEditorContext()$path)))
+require(ggdist) #plotting
+require(lme4) #for statistics (mixed modelling)
+require(lmerTest) #approximate p values for lme4
+setwd(paste0(dirname(rstudioapi::getSourceEditorContext()$path))) #set working directory
 
 #Set up a function that creates a dataset given certain values
 Simulate_RT_Data = function(nParticipants,
@@ -98,49 +98,49 @@ nIterations = 100
 #everything is optional to combine. Mix and match. Can't increase number of trials? How about more participants?
 #Wanna check how small of a effect you can detect with your resources? Simulate for a range of fairly small effect sizes
 #The world is your mf oyster!
-PowerfulDataframe_RT = data.frame()
-for (nParticipants in c(10,15,20)){
-  for (reps in c(10, 20, 30)){
-    for (Mean_Effect in Range_Mean_Effects){
-      
-      TimeStartTrial = Sys.time() #get time at beginning of trial
-      
-      for(i in 1:nIterations){
-        
-        print(paste0("Number of Participants: ", nParticipants))
-        print(paste0("Number of reps: ", reps))
-        print(paste0("Iteration: ", i))
-        print(paste0("Mean_Effect: ", Mean_Effect))
-        
-        
-        #use our function to 
-        ReactionTimes = Simulate_RT_Data(nParticipants,
-                                                 reps,
-                                                 ConditionOfInterest,
-                                                 Mean_Difficulty_Baseline,
-                                                 Mean_Effect = Mean_Effect,
-                                                 Scale_to_ms,
-                                                 Between_Participant_Variability_Baseline)
-        
-        GLMM = glmer(ReactionTime ~ ConditionOfInterest + (ConditionOfInterest | ID),
-                      data = ReactionTimes,
-                      family = gaussian(link = "log"),
-                      control=glmerControl(optimizer="bobyqa"))
-        
-
-        #save everything into
-        PowerfulDataframe_RT = rbind(PowerfulDataframe_RT,data.frame(nParticipants = nParticipants,
-                                                               rep = reps,
-                                                               Effect_Size = Mean_Effect,
-                                                               pvalue = summary(GLMM)$coefficients["ConditionOfInterestHard","Pr(>|z|)"],
-                                                               estimate = summary(GLMM)$coefficients["ConditionOfInterestHard","Estimate"],
-                                                               iteration = i))
-      }
-      
-      save(PowerfulDataframe_RT, file = paste0(dirname(rstudioapi::getSourceEditorContext()$path), "/SavedVariables/PowerfulDataframe_RT.RData"))
-    }
-  }
-}
+# PowerfulDataframe_RT = data.frame()
+# for (nParticipants in c(10,15,20)){
+#   for (reps in c(10, 20, 30)){
+#     for (Mean_Effect in Range_Mean_Effects){
+#       
+#       TimeStartTrial = Sys.time() #get time at beginning of trial
+#       
+#       for(i in 1:nIterations){
+#         
+#         print(paste0("Number of Participants: ", nParticipants))
+#         print(paste0("Number of reps: ", reps))
+#         print(paste0("Iteration: ", i))
+#         print(paste0("Mean_Effect: ", Mean_Effect))
+#         
+#         
+#         #use our function to 
+#         ReactionTimes = Simulate_RT_Data(nParticipants,
+#                                                  reps,
+#                                                  ConditionOfInterest,
+#                                                  Mean_Difficulty_Baseline,
+#                                                  Mean_Effect = Mean_Effect,
+#                                                  Scale_to_ms,
+#                                                  Between_Participant_Variability_Baseline)
+#         
+#         GLMM = glmer(ReactionTime ~ ConditionOfInterest + (ConditionOfInterest | ID),
+#                       data = ReactionTimes,
+#                       family = gaussian(link = "log"),
+#                       control=glmerControl(optimizer="bobyqa"))
+#         
+# 
+#         #save everything into
+#         PowerfulDataframe_RT = rbind(PowerfulDataframe_RT,data.frame(nParticipants = nParticipants,
+#                                                                rep = reps,
+#                                                                Effect_Size = Mean_Effect,
+#                                                                pvalue = summary(GLMM)$coefficients["ConditionOfInterestHard","Pr(>|z|)"],
+#                                                                estimate = summary(GLMM)$coefficients["ConditionOfInterestHard","Estimate"],
+#                                                                iteration = i))
+#       }
+#       
+#       save(PowerfulDataframe_RT, file = paste0(dirname(rstudioapi::getSourceEditorContext()$path), "/SavedVariables/PowerfulDataframe_RT.RData"))
+#     }
+#   }
+# }
 
 load(file=paste0(dirname(rstudioapi::getSourceEditorContext()$path),"/SavedVariables/PowerfulDataframe_RT.RData"))
 
