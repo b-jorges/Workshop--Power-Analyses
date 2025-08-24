@@ -69,7 +69,11 @@ ReactionTimes = Simulate_RT_Data(nParticipants = 20,
 #Check that the distribution of values generated here makes sense
 ggplot(ReactionTimes %>% filter(ReactionTime < 1000), aes(ReactionTime, color = ConditionOfInterest)) +
   geom_density() +
-  coord_cartesian(xlim = c(0, 1000))
+  coord_cartesian(xlim = c(0, 1000)) +
+  xlab("Reaction Time (ms)") +
+  ylab("Density") +
+  scale_color_discrete(name = "Condition\nof Interest")
+ggsave("Figures/FigureOneSimulatedDataset_RT.jpg",w = 9, h = 5)
 
 ConditionOfInterest = c("Easy", "Hard")
 #Give names to the conditions you're interested in
@@ -146,6 +150,7 @@ load(file=paste0(dirname(rstudioapi::getSourceEditorContext()$path),"/SavedVaria
 
 alpha = 0.05 #set alpha to 0.05
 
+#calculate power by counting the fraction of simulated data sets where p < 0.05
 PowerfulDataframe_RT = PowerfulDataframe_RT %>% group_by(nParticipants,rep, Effect_Size) %>% 
   mutate(Power = mean(pvalue < alpha)) %>% 
   slice(1) %>% 
@@ -163,7 +168,8 @@ ggplot(PowerfulDataframe_RT,
   geom_hline(yintercept = 0.9, linetype=2) +
   geom_hline(yintercept = 0.95, linetype=3) +
   ylim(c(0,1)) +
+  scale_x_continuous(breaks = c(10,15,20)) +
   facet_wrap(.~n_trials) +
   scale_color_manual(values = c("orange","purple","red"),
                      name = "Strength of Effect")
-ggsave("Figures/FigureOnePowerAnalysis.jpg",w = 9, h = 5)
+ggsave("Figures/FigureOnePowerAnalysis_RT.jpg",w = 9, h = 5)
